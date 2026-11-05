@@ -20,8 +20,11 @@ app.use(
 app.use(
   cors({
     origin: [
-      config.client_url,
-      config.admin_url,
+      ...new Set(
+        [config.client_url, config.admin_url].map(
+          (url) => new URL(url).origin
+        )
+      ),
       "http://localhost:3000",
       "http://localhost:3001",
       "http://localhost:5173",

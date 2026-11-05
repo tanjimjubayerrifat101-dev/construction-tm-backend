@@ -31,8 +31,10 @@ export default {
     pass: process.env.SMTP_PASS || "",
     from: process.env.SMTP_FROM || "TMYAZNA Support <no-reply@tmyazna.com>",
   },
-  client_url: process.env.CLIENT_URL || "http://localhost:3000",
-  admin_url: process.env.ADMIN_URL || "http://localhost:3000/admin",
+  client_url:
+    process.env.CLIENT_URL || "https://construction-tm.vercel.app/en",
+  admin_url:
+    process.env.ADMIN_URL || "https://construction-tm.vercel.app/en/admin",
   super_admin: {
     name: process.env.SUPER_ADMIN_NAME || "Admin",
     email: process.env.SUPER_ADMIN_EMAIL || "admin@tmyazna.com",
