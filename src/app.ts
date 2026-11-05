@@ -25,6 +25,7 @@ app.use(
           (url) => new URL(url).origin
         )
       ),
+      "https://construction-tm.vercel.app",
       "http://localhost:3000",
       "http://localhost:3001",
       "http://localhost:5173",
