@@ -9,6 +9,8 @@ dotenv_1.default.config({ path: path_1.default.join(process.cwd(), ".env") });
 exports.default = {
     env: process.env.NODE_ENV || "development",
     port: process.env.PORT ? Number(process.env.PORT) : 5000,
+    server_base_url: process.env.SERVER_BASE_URL ||
+        `http://localhost:${process.env.PORT || 5000}`,
     database_url: process.env.DATABASE_URL || "",
     bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS
         ? Number(process.env.BCRYPT_SALT_ROUNDS)
@@ -31,8 +33,8 @@ exports.default = {
         pass: process.env.SMTP_PASS || "",
         from: process.env.SMTP_FROM || "TMYAZNA Support <no-reply@tmyazna.com>",
     },
-    client_url: process.env.CLIENT_URL || "http://localhost:3000",
-    admin_url: process.env.ADMIN_URL || "http://localhost:3000/admin",
+    client_url: process.env.CLIENT_URL || "https://construction-tm.vercel.app/en",
+    admin_url: process.env.ADMIN_URL || "https://construction-tm.vercel.app/en/admin",
     super_admin: {
         name: process.env.SUPER_ADMIN_NAME || "Admin",
         email: process.env.SUPER_ADMIN_EMAIL || "admin@tmyazna.com",

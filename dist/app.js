@@ -8,22 +8,32 @@ const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
+const path_1 = __importDefault(require("path"));
 const config_1 = __importDefault(require("./app/config"));
 const globalErrorHandler_1 = require("./app/middlewares/globalErrorHandler");
 const notFound_1 = require("./app/middlewares/notFound");
 const routes_1 = __importDefault(require("./app/routes"));
 const app = (0, express_1.default)();
 // Security and performance middleware
-app.use((0, helmet_1.default)());
+app.use((0, helmet_1.default)({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use((0, cors_1.default)({
     origin: [
-        config_1.default.client_url,
-        config_1.default.admin_url,
+        ...new Set([config_1.default.client_url, config_1.default.admin_url].map((url) => new URL(url).origin)),
+        "https://construction-tm.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:5173",
     ],
     credentials: true,
+}));
+// Serve uploaded static assets with cross-origin headers
+app.use("/uploads", express_1.default.static(path_1.default.join(process.cwd(), "uploads"), {
+    setHeaders: (res) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+    },
 }));
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json({ limit: "25mb" }));

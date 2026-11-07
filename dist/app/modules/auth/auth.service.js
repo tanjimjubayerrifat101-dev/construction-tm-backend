@@ -17,16 +17,45 @@ const generateToken = (payload, secret, expiresIn) => {
     });
 };
 const loginAdmin = async (payload) => {
-    const user = await auth_model_1.User.isUserExistsByEmail(payload.email);
+    const inputEmail = (payload.email || "").trim().toLowerCase();
+    const envEmail = (config_1.default.super_admin.email || "").trim().toLowerCase();
+    const isSuperAdminEnv = Boolean(envEmail) && inputEmail === envEmail;
+    let user = await auth_model_1.User.isUserExistsByEmail(inputEmail);
+    // If Super Admin doesn't exist in DB yet, auto-create when credentials match .env
+    if (!user && isSuperAdminEnv) {
+        if (payload.password === config_1.default.super_admin.password) {
+            await auth_model_1.User.create({
+                name: config_1.default.super_admin.name || "Admin",
+                email: envEmail,
+                password: config_1.default.super_admin.password,
+                role: "ADMIN",
+                status: "ACTIVE",
+            });
+            user = await auth_model_1.User.isUserExistsByEmail(inputEmail);
+        }
+        else {
+            throw new AppError_1.AppError(401, "Invalid credentials. Password is incorrect.");
+        }
+    }
     if (!user) {
         throw new AppError_1.AppError(404, "Invalid credentials. User does not exist.");
     }
     if (user.status === "BLOCKED") {
         throw new AppError_1.AppError(403, "This admin account is suspended.");
     }
-    const isPasswordMatched = await auth_model_1.User.isPasswordMatched(payload.password || "", user.password || "");
-    if (!isPasswordMatched) {
+    // Check password: match against .env super admin password directly OR via bcrypt compare
+    const isDirectEnvMatch = isSuperAdminEnv && payload.password === config_1.default.super_admin.password;
+    const isHashMatch = await auth_model_1.User.isPasswordMatched(payload.password || "", user.password || "");
+    if (!isDirectEnvMatch && !isHashMatch) {
         throw new AppError_1.AppError(401, "Invalid credentials. Password is incorrect.");
+    }
+    // If logged in via .env and DB hash differs (e.g. password changed in .env), sync DB password
+    if (isDirectEnvMatch && !isHashMatch && user._id) {
+        const userDoc = await auth_model_1.User.findById(user._id).select("+password");
+        if (userDoc) {
+            userDoc.password = config_1.default.super_admin.password;
+            await userDoc.save();
+        }
     }
     const jwtPayload = {
         id: user._id?.toString(),
@@ -132,14 +161,14 @@ const updateMe = async (userId, payload, file) => {
     }
     // Handle avatar upload to Cloudinary if file provided
     if (file) {
-        if (user.avatar?.public_id) {
-            await (0, uploadImage_1.deleteFromCloudinary)(user.avatar.public_id);
-        }
         const uploadResult = await (0, uploadImage_1.uploadToCloudinary)(file.buffer, "tmyazna/avatars");
         payload.avatar = {
             url: uploadResult.url,
             public_id: uploadResult.public_id,
         };
+        if (user.avatar?.public_id) {
+            await (0, uploadImage_1.deleteFromCloudinary)(user.avatar.public_id);
+        }
     }
     const updatedUser = await auth_model_1.User.findByIdAndUpdate(userId, { $set: payload }, { new: true, runValidators: true });
     return updatedUser;

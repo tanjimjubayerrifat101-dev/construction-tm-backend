@@ -1,9 +1,15 @@
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import {
+  v2 as cloudinary,
+  UploadApiErrorResponse,
+  UploadApiResponse,
+} from "cloudinary";
 import fs from "fs";
 import multer from "multer";
 import path from "path";
 import config from "../config";
 import { AppError } from "../errors/AppError";
+
+
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloud_name,
@@ -33,53 +39,26 @@ export interface ICloudinaryUploadResult {
   public_id: string;
 }
 
-/**
- * Fallback to local file system storage when Cloudinary is unavailable or restricted
- */
-const saveToLocalStorage = async (
+const uploadBufferToCloudinary = async (
   fileBuffer: Buffer,
-  folder = "tmyazna",
-  originalName?: string
-): Promise<ICloudinaryUploadResult> => {
-  const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_\-\/]/g, "");
-  const targetDir = path.join(process.cwd(), "uploads", sanitizedFolder);
-  await fs.promises.mkdir(targetDir, { recursive: true });
-
-  const ext = originalName ? path.extname(originalName) || ".png" : ".png";
-  const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-  const targetFilePath = path.join(targetDir, uniqueName);
-
-  await fs.promises.writeFile(targetFilePath, fileBuffer);
-
-  const baseUrl = config.server_base_url || `http://localhost:${config.port}`;
-  const fileUrl = `${baseUrl}/uploads/${sanitizedFolder}/${uniqueName}`;
-
-  return {
-    url: fileUrl,
-    public_id: `local:${sanitizedFolder}/${uniqueName}`,
-  };
-};
-
-/**
- * Upload buffer directly to Cloudinary with automatic fallback to local disk
- */
-export const uploadToCloudinary = async (
-  fileBuffer: Buffer,
-  folder = "tmyazna"
+  options: {
+    folder: string;
+    resource_type: "image" | "auto";
+    public_id?: string;
+  }
 ): Promise<ICloudinaryUploadResult> => {
   if (!config.cloudinary.cloud_name || !config.cloudinary.api_key || !config.cloudinary.api_secret) {
-    console.warn("⚠️ Cloudinary not fully configured. Saving image locally...");
-    return saveToLocalStorage(fileBuffer, folder);
+    throw new AppError(
+      500,
+      "Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+    );
   }
 
   try {
     const result = await new Promise<ICloudinaryUploadResult>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: "image",
-        },
-        (error, result: UploadApiResponse | undefined) => {
+        options,
+        (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
           if (error || !result) {
             return reject(error || new Error("Cloudinary upload failed"));
           }
@@ -94,13 +73,47 @@ export const uploadToCloudinary = async (
     });
 
     return result;
-  } catch (error: any) {
-    console.warn(
-      `⚠️ Cloudinary upload failed (${error?.message || "unknown error"}). Gracefully falling back to local storage...`
+  } catch (error) {
+    const cloudinaryError =
+      error && typeof error === "object" ? error : {};
+    const message =
+      "message" in cloudinaryError && typeof cloudinaryError.message === "string"
+        ? cloudinaryError.message
+        : "Unknown Cloudinary error";
+    const httpCode =
+      "http_code" in cloudinaryError && typeof cloudinaryError.http_code === "number"
+        ? cloudinaryError.http_code
+        : undefined;
+    const requestId =
+      "request_id" in cloudinaryError &&
+      typeof cloudinaryError.request_id === "string"
+        ? cloudinaryError.request_id
+        : undefined;
+
+    console.error("Cloudinary upload failed:", {
+      message,
+      httpCode,
+      requestId,
+    });
+    const userMessage =
+      httpCode === 403
+        ? "Cloudinary denied this upload (403 Forbidden). Verify the account is active and the API key has upload access to this cloud."
+        : `Cloudinary upload failed${httpCode ? ` (HTTP ${httpCode})` : ""}: ${message}`;
+    throw new AppError(
+      502,
+      userMessage
     );
-    return saveToLocalStorage(fileBuffer, folder);
   }
 };
+
+export const uploadToCloudinary = async (
+  fileBuffer: Buffer,
+  folder = "tmyazna"
+): Promise<ICloudinaryUploadResult> =>
+  uploadBufferToCloudinary(fileBuffer, {
+    folder,
+    resource_type: "image",
+  });
 
 export const uploadDoc = multer({
   storage,
@@ -132,44 +145,14 @@ export const uploadRawToCloudinary = async (
   fileBuffer: Buffer,
   folder = "tmyazna/resumes",
   originalName?: string
-): Promise<ICloudinaryUploadResult> => {
-  if (!config.cloudinary.cloud_name || !config.cloudinary.api_key || !config.cloudinary.api_secret) {
-    console.warn("⚠️ Cloudinary not fully configured. Storing raw file locally...");
-    return saveToLocalStorage(fileBuffer, folder, originalName);
-  }
-
-  try {
-    const result = await new Promise<ICloudinaryUploadResult>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: "auto",
-          public_id: originalName
-            ? `${Date.now()}-${originalName.replace(/\.[^/.]+$/, "")}`
-            : undefined,
-        },
-        (error, result: UploadApiResponse | undefined) => {
-          if (error || !result) {
-            return reject(error || new Error("File upload failed"));
-          }
-          resolve({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        }
-      );
-
-      uploadStream.end(fileBuffer);
-    });
-
-    return result;
-  } catch (error: any) {
-    console.warn(
-      `⚠️ Cloudinary raw upload failed (${error?.message || "unknown error"}). Gracefully falling back to local storage...`
-    );
-    return saveToLocalStorage(fileBuffer, folder, originalName);
-  }
-};
+): Promise<ICloudinaryUploadResult> =>
+  uploadBufferToCloudinary(fileBuffer, {
+    folder,
+    resource_type: "auto",
+    public_id: originalName
+      ? `${Date.now()}-${originalName.replace(/\.[^/.]+$/, "")}`
+      : undefined,
+  });
 
 /**
  * Delete image or raw file from Cloudinary by public_id or local disk
@@ -196,4 +179,3 @@ export const deleteFromCloudinary = async (public_id: string): Promise<void> => 
     console.error("Cloudinary deletion failed:", error);
   }
 };
-

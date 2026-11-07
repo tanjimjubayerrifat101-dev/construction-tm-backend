@@ -118,14 +118,14 @@ const updateMediaPost = async (id, payload, file) => {
         }
     }
     if (file) {
-        if (post.image?.public_id) {
-            await (0, uploadImage_1.deleteFromCloudinary)(post.image.public_id);
-        }
         const uploadResult = await (0, uploadImage_1.uploadToCloudinary)(file.buffer, "tmyazna/media");
         payload.image = {
             url: uploadResult.url,
             public_id: uploadResult.public_id,
         };
+        if (post.image?.public_id) {
+            await (0, uploadImage_1.deleteFromCloudinary)(post.image.public_id);
+        }
     }
     const updated = await media_model_1.MediaPost.findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true });
     return updated;

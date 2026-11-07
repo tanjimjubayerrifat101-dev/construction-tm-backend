@@ -225,14 +225,14 @@ const updateMe = async (
 
   // Handle avatar upload to Cloudinary if file provided
   if (file) {
-    if (user.avatar?.public_id) {
-      await deleteFromCloudinary(user.avatar.public_id);
-    }
     const uploadResult = await uploadToCloudinary(file.buffer, "tmyazna/avatars");
     payload.avatar = {
       url: uploadResult.url,
       public_id: uploadResult.public_id,
     };
+    if (user.avatar?.public_id) {
+      await deleteFromCloudinary(user.avatar.public_id);
+    }
   }
 
   const updatedUser = await User.findByIdAndUpdate(

@@ -179,14 +179,14 @@ const updateProject = async (
   }
 
   if (file) {
-    if (project.image?.public_id) {
-      await deleteFromCloudinary(project.image.public_id);
-    }
     const uploadResult = await uploadToCloudinary(file.buffer, "tmyazna/projects");
     payload.image = {
       url: uploadResult.url,
       public_id: uploadResult.public_id,
     };
+    if (project.image?.public_id) {
+      await deleteFromCloudinary(project.image.public_id);
+    }
   }
 
   const updated = await Project.findByIdAndUpdate(

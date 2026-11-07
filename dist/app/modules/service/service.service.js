@@ -144,14 +144,14 @@ const updateService = async (id, payload, file) => {
     }
     // Upload new image if file provided
     if (file) {
-        if (service.image?.public_id) {
-            await (0, uploadImage_1.deleteFromCloudinary)(service.image.public_id);
-        }
         const uploadResult = await (0, uploadImage_1.uploadToCloudinary)(file.buffer, "tmyazna/services");
         payload.image = {
             url: uploadResult.url,
             public_id: uploadResult.public_id,
         };
+        if (service.image?.public_id) {
+            await (0, uploadImage_1.deleteFromCloudinary)(service.image.public_id);
+        }
     }
     const updatedService = await service_model_1.Service.findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true });
     return updatedService;
@@ -248,14 +248,14 @@ const updateCatalogItem = async (serviceId, catalogId, payload, file) => {
         throw new AppError_1.AppError(404, `Catalog item '${catalogId}' not found.`);
     }
     if (file) {
-        if (service.catalogItems[catIndex].image?.public_id) {
-            await (0, uploadImage_1.deleteFromCloudinary)(service.catalogItems[catIndex].image.public_id);
-        }
         const uploadResult = await (0, uploadImage_1.uploadToCloudinary)(file.buffer, "tmyazna/catalog");
         payload.image = {
             url: uploadResult.url,
             public_id: uploadResult.public_id,
         };
+        if (service.catalogItems[catIndex].image?.public_id) {
+            await (0, uploadImage_1.deleteFromCloudinary)(service.catalogItems[catIndex].image.public_id);
+        }
     }
     service.catalogItems[catIndex] = {
         ...service.catalogItems[catIndex],

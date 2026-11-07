@@ -12,7 +12,7 @@ Production-ready, industry-standard Express + TypeScript + MongoDB + Zod REST AP
 - **Services & Sub-Services (Tabs)**: Hierarchical service structures with integrated disciplines (sub-services/tabs) and catalog items with equipment specifications and badges.
 - **Projects & Interactive Saudi Map Presence**: Full project management with sector categorization, status tracking, completion percentage, flagship flags, and direct region mapping (`/api/v1/projects/presence-map`) powering the interactive Saudi Arabia map.
 - **Media Center (News & Insights)**: Article and blog management with categories, reading time, publication dates, and author information.
-- **Media Uploads via Cloudinary**: Seamless multipart form-data uploads via Multer and Cloudinary with automatic cleanup of replaced/deleted assets.
+- **File Uploads via Cloudinary**: Images, service/catalog media, avatars, and career CVs are uploaded to Cloudinary; upload failures return an error instead of saving files locally.
 - **Reusable Utilities**: Centralized `sendResponse`, `catchAsync`, `globalErrorHandler`, `validateRequest`, `uploadImage`, and `sendEmail`.
 
 ---
@@ -97,6 +97,8 @@ SUPER_ADMIN_NAME=Admin
 SUPER_ADMIN_EMAIL=admin@tmyazna.com
 SUPER_ADMIN_PASSWORD=AdminPassword@123
 ```
+
+All three Cloudinary values are required for file uploads.
 
 ---
 

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./app/config"));
+const seed_1 = require("./app/seed/seed");
 let server;
 async function bootstrap() {
     try {
@@ -15,6 +16,7 @@ async function bootstrap() {
         else {
             await mongoose_1.default.connect(config_1.default.database_url);
             console.log(" Connected to MongoDB Database successfully");
+            await (0, seed_1.seedSuperAdmin)();
         }
         server = app_1.default.listen(config_1.default.port, () => {
             console.log(`🚀 TMYAZNA Server is listening on http://localhost:${config_1.default.port}`);
@@ -45,6 +47,11 @@ process.on("uncaughtException", (error) => {
 process.on("SIGTERM", () => {
     console.log("👋 SIGTERM received, shutting down gracefully");
     if (server) {
-        server.close();
+        server.close(() => {
+            process.exit(0);
+        });
+    }
+    else {
+        process.exit(0);
     }
 });

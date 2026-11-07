@@ -146,14 +146,14 @@ const updateProject = async (id, payload, file) => {
         }
     }
     if (file) {
-        if (project.image?.public_id) {
-            await (0, uploadImage_1.deleteFromCloudinary)(project.image.public_id);
-        }
         const uploadResult = await (0, uploadImage_1.uploadToCloudinary)(file.buffer, "tmyazna/projects");
         payload.image = {
             url: uploadResult.url,
             public_id: uploadResult.public_id,
         };
+        if (project.image?.public_id) {
+            await (0, uploadImage_1.deleteFromCloudinary)(project.image.public_id);
+        }
     }
     const updated = await project_model_1.Project.findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true });
     return updated;

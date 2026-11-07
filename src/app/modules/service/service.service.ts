@@ -180,14 +180,14 @@ const updateService = async (
 
   // Upload new image if file provided
   if (file) {
-    if (service.image?.public_id) {
-      await deleteFromCloudinary(service.image.public_id);
-    }
     const uploadResult = await uploadToCloudinary(file.buffer, "tmyazna/services");
     payload.image = {
       url: uploadResult.url,
       public_id: uploadResult.public_id,
     };
+    if (service.image?.public_id) {
+      await deleteFromCloudinary(service.image.public_id);
+    }
   }
 
   const updatedService = await Service.findByIdAndUpdate(
@@ -328,14 +328,14 @@ const updateCatalogItem = async (
   }
 
   if (file) {
-    if (service.catalogItems[catIndex].image?.public_id) {
-      await deleteFromCloudinary(service.catalogItems[catIndex].image.public_id);
-    }
     const uploadResult = await uploadToCloudinary(file.buffer, "tmyazna/catalog");
     payload.image = {
       url: uploadResult.url,
       public_id: uploadResult.public_id,
     };
+    if (service.catalogItems[catIndex].image?.public_id) {
+      await deleteFromCloudinary(service.catalogItems[catIndex].image.public_id);
+    }
   }
 
   service.catalogItems[catIndex] = {

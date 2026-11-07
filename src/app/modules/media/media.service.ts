@@ -148,14 +148,14 @@ const updateMediaPost = async (
   }
 
   if (file) {
-    if (post.image?.public_id) {
-      await deleteFromCloudinary(post.image.public_id);
-    }
     const uploadResult = await uploadToCloudinary(file.buffer, "tmyazna/media");
     payload.image = {
       url: uploadResult.url,
       public_id: uploadResult.public_id,
     };
+    if (post.image?.public_id) {
+      await deleteFromCloudinary(post.image.public_id);
+    }
   }
 
   const updated = await MediaPost.findByIdAndUpdate(
